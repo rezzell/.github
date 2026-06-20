@@ -1,0 +1,33 @@
+name: Validate Choose Runner
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/choose-runner.yml"
+      - ".github/workflows/validate-choose-runner.yml"
+      - ".github/scripts/choose-runner.sh"
+      - ".github/scripts/test-choose-runner.sh"
+      - "README.md"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/choose-runner.yml"
+      - ".github/workflows/validate-choose-runner.yml"
+      - ".github/scripts/choose-runner.sh"
+      - ".github/scripts/test-choose-runner.sh"
+      - "README.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Run choose-runner tests
+        run: bash .github/scripts/test-choose-runner.sh

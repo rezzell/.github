@@ -33,50 +33,29 @@ jobs:
     outputs:
       runner: ${{ steps.select.outputs.runner }}
     steps:
+      - name: Resolve workflow repository source
+        id: workflow-source
+        env:
+          GITHUB_WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+          echo "repository=${GITHUB_WORKFLOW_REF%%/.github/workflows/*}" >> "${GITHUB_OUTPUT}"
+          echo "ref=${GITHUB_WORKFLOW_REF##*@}" >> "${GITHUB_OUTPUT}"
+      - name: Check out workflow repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: ${{ steps.workflow-source.outputs.repository }}
+          ref: ${{ steps.workflow-source.outputs.ref }}
+          path: workflow-repo
       - name: Select runner target
         id: select
         env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+          GITHUB_EVENT_PATH: ${{ github.event_path }}
           GH_TOKEN: ${{ secrets.org-runners-read-token }}
           ORGANIZATION: ${{ inputs.organization }}
           SCALE_SET_NAME: ${{ inputs.scale-set-name }}
           FALLBACK_RUNNER: ${{ inputs.fallback-runner }}
         run: |
           set -euo pipefail
-
-          if [[ -z "${GH_TOKEN}" ]]; then
-            echo "Choose Runner: no org-runners-read-token secret available; using fallback runner ${FALLBACK_RUNNER}"
-            echo "runner=[\"${FALLBACK_RUNNER}\"]" >> "${GITHUB_OUTPUT}"
-            exit 0
-          fi
-
-          online_count=0
-          url="https://api.github.com/orgs/${ORGANIZATION}/actions/runners?per_page=100"
-
-          while [[ -n "${url}" ]]; do
-            headers_file="$(mktemp)"
-            body_file="$(mktemp)"
-            trap 'rm -f "${headers_file}" "${body_file}"' EXIT
-
-            curl -fsSL \
-              -H "Authorization: Bearer ${GH_TOKEN}" \
-              -H "Accept: application/vnd.github+json" \
-              -D "${headers_file}" \
-              "${url}" \
-              -o "${body_file}"
-
-            page_count="$(jq -r --arg prefix "${SCALE_SET_NAME}" '[.runners[] | select(.status == "online" and (.name | startswith($prefix)))] | length' "${body_file}")"
-            online_count="$((online_count + page_count))"
-
-            url="$(grep -i '^link:' "${headers_file}" | sed -n 's/.*<\([^>]*\)>; rel="next".*/\1/p' || true)"
-
-            rm -f "${headers_file}" "${body_file}"
-            trap - EXIT
-          done
-
-          if [[ "${online_count}" -gt 0 ]]; then
-            echo "Choose Runner: found ${online_count} online runner(s) matching ${SCALE_SET_NAME}; using ${SCALE_SET_NAME}"
-            echo "runner=[\"${SCALE_SET_NAME}\"]" >> "${GITHUB_OUTPUT}"
-          else
-            echo "Choose Runner: found no online runners matching ${SCALE_SET_NAME}; using fallback runner ${FALLBACK_RUNNER}"
-            echo "runner=[\"${FALLBACK_RUNNER}\"]" >> "${GITHUB_OUTPUT}"
-          fi
+          ./workflow-repo/.github/scripts/choose-runner.sh >> "${GITHUB_OUTPUT}"

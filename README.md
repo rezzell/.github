@@ -25,6 +25,13 @@ Treat every file and every commit in this repository as public.
   without exposing credentials or blocking untrusted contributions.
 - Pin third-party actions to immutable commit SHAs.
 
+## `choose-runner` trust policy
+
+- Fork-originated pull requests always fall back to the caller's GitHub-hosted runner.
+- Trusted events (`push`, `workflow_dispatch`, `schedule`, and non-fork pull requests) may use self-hosted runners when `ORG_RUNNERS_READ_TOKEN` is available.
+- If the token is absent or no matching runner is online, the workflow falls back to the configured GitHub-hosted runner.
+- Caller workflows should continue to consume `needs.choose-runner.outputs.runner` with `runs-on: ${{ fromJson(...) }}`.
+
 Private organization-only actions and workflows belong in
 `rezzell/github-actions-private`, not this repository.
 
