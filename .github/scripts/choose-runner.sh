@@ -7,6 +7,7 @@ token="${GH_TOKEN:-}"
 organization="${ORGANIZATION:?ORGANIZATION is required}"
 scale_set_name="${SCALE_SET_NAME:?SCALE_SET_NAME is required}"
 fallback_runner="${FALLBACK_RUNNER:?FALLBACK_RUNNER is required}"
+public_runner_set_alias="preferred-runner-set"
 
 emit_runner() {
   local runner="$1"
@@ -114,9 +115,9 @@ fi
 online_count="$(fetch_all_runners)"
 
 if [[ "${online_count}" -gt 0 ]]; then
-  echo "Choose Runner: found ${online_count} online runner(s) matching ${scale_set_name}; using ${scale_set_name}"
+  echo "Choose Runner: found ${online_count} online runner(s) for the preferred runner set; using ${public_runner_set_alias}"
   emit_runner "${scale_set_name}"
 else
-  echo "Choose Runner: found no online runners matching ${scale_set_name}; using fallback runner ${fallback_runner}"
+  echo "Choose Runner: found no online runners for the preferred runner set; using fallback runner ${fallback_runner}"
   emit_runner "${fallback_runner}"
 fi

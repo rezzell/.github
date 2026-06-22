@@ -51,7 +51,7 @@ run_case_multi_page() {
     bash "${script}"
   )"
 
-  printf '%s\n' "${output}" | grep -F 'Choose Runner: found 1 online runner(s) matching preferred-runner-set; using preferred-runner-set' >/dev/null
+  printf '%s\n' "${output}" | grep -F 'Choose Runner: found 1 online runner(s) for the preferred runner set; using preferred-runner-set' >/dev/null
   printf '%s\n' "${output}" | grep -F 'runner=["preferred-runner-set"]' >/dev/null
 }
 
@@ -80,7 +80,7 @@ run_case \
   "token" \
   '{"runners":[{"name":"other-set-001","status":"online"}]}' \
   '["ubuntu-latest"]' \
-  'Choose Runner: found no online runners matching preferred-runner-set; using fallback runner ubuntu-latest'
+  'Choose Runner: found no online runners for the preferred runner set; using fallback runner ubuntu-latest'
 
 run_case \
   "trusted-has-runner" \
@@ -89,7 +89,7 @@ run_case \
   "token" \
   '{"runners":[{"name":"preferred-runner-set-001","status":"online"}]}' \
   '["preferred-runner-set"]' \
-  'Choose Runner: found 1 online runner(s) matching preferred-runner-set; using preferred-runner-set'
+  'Choose Runner: found 1 online runner(s) for the preferred runner set; using preferred-runner-set'
 
 run_case \
   "non-fork-pr" \
@@ -98,7 +98,7 @@ run_case \
   "token" \
   '{"runners":[{"name":"preferred-runner-set-003","status":"online"}]}' \
   '["preferred-runner-set"]' \
-  'Choose Runner: found 1 online runner(s) matching preferred-runner-set; using preferred-runner-set'
+  'Choose Runner: found 1 online runner(s) for the preferred runner set; using preferred-runner-set'
 
 run_case_multi_page
 
