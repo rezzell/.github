@@ -1,0 +1,165 @@
+name: S3 Cache Manager
+description: Restore and conditionally save GitHub Actions caches through an S3 backend.
+
+inputs:
+  cache-key:
+    description: Unique cache key to restore and save.
+    required: true
+  cache-paths:
+    description: Multiline list of file paths to cache.
+    required: true
+  restore-keys:
+    description: Optional multiline list of fallback cache key prefixes.
+    required: false
+    default: ""
+  s3-endpoint:
+    description: S3-compatible endpoint URL for the cache bucket.
+    required: false
+    default: ""
+  s3-bucket:
+    description: S3 bucket name for cache objects.
+    required: false
+    default: ""
+  aws-access-key-id:
+    description: AWS-compatible access key ID with cache bucket access.
+    required: false
+    default: ""
+  aws-secret-access-key:
+    description: AWS-compatible secret access key with cache bucket access.
+    required: false
+    default: ""
+  aws-region:
+    description: AWS region to provide to the S3 client.
+    required: false
+    default: us-east-1
+  save-cache:
+    description: "'auto' saves only on the repository default branch outside pull_request events; use 'true' or 'false' to override."
+    required: false
+    default: auto
+  force-path-style:
+    description: Force path-style S3 URLs for S3-compatible object stores.
+    required: false
+    default: "true"
+  enable-cross-os-archive:
+    description: Allow cache archives to be restored or saved across operating systems.
+    required: false
+    default: "false"
+  fail-on-cache-miss:
+    description: Fail the restore step when no matching cache is found.
+    required: false
+    default: "false"
+
+outputs:
+  cache-hit:
+    description: Whether the primary cache key was restored exactly.
+    value: ${{ steps.restore.outputs.cache-hit }}
+  cache-primary-key:
+    description: Resolved primary cache key used for restore and save.
+    value: ${{ steps.restore.outputs.cache-primary-key }}
+  cache-matched-key:
+    description: Cache key that matched during restore, if any.
+    value: ${{ steps.restore.outputs.cache-matched-key }}
+  save-cache:
+    description: Whether this invocation was allowed to save a new cache.
+    value: ${{ steps.save-policy.outputs.save-cache }}
+  cache-enabled:
+    description: Whether all S3 backend settings were available.
+    value: ${{ steps.backend.outputs.enabled }}
+
+runs:
+  using: composite
+  steps:
+    - name: Resolve S3 cache backend
+      id: backend
+      shell: bash
+      env:
+        S3_ENDPOINT: ${{ inputs.s3-endpoint }}
+        S3_BUCKET: ${{ inputs.s3-bucket }}
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+      run: |
+        set -euo pipefail
+
+        missing=()
+        [[ -n "${S3_ENDPOINT}" ]] || missing+=("s3-endpoint")
+        [[ -n "${S3_BUCKET}" ]] || missing+=("s3-bucket")
+        [[ -n "${AWS_ACCESS_KEY_ID}" ]] || missing+=("aws-access-key-id")
+        [[ -n "${AWS_SECRET_ACCESS_KEY}" ]] || missing+=("aws-secret-access-key")
+
+        if [[ "${#missing[@]}" -gt 0 ]]; then
+          printf '::warning::S3 cache backend is unavailable; missing %s. Skipping cache restore/save.\n' "$(IFS=', '; echo "${missing[*]}")"
+          echo "enabled=false" >> "${GITHUB_OUTPUT}"
+        else
+          echo "enabled=true" >> "${GITHUB_OUTPUT}"
+        fi
+
+    - name: Resolve cache save policy
+      id: save-policy
+      shell: bash
+      env:
+        CACHE_BACKEND_ENABLED: ${{ steps.backend.outputs.enabled }}
+        REQUESTED_SAVE_CACHE: ${{ inputs.save-cache }}
+        GITHUB_EVENT_NAME: ${{ github.event_name }}
+        GITHUB_REF_NAME: ${{ github.ref_name }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      run: |
+        set -euo pipefail
+
+        if [[ "${CACHE_BACKEND_ENABLED}" != "true" ]]; then
+          echo "save-cache=false" >> "${GITHUB_OUTPUT}"
+          exit 0
+        fi
+
+        case "${REQUESTED_SAVE_CACHE}" in
+          auto)
+            if [[ "${GITHUB_EVENT_NAME}" != pull_request* && -n "${DEFAULT_BRANCH}" && "${GITHUB_REF_NAME}" == "${DEFAULT_BRANCH}" ]]; then
+              echo "save-cache=true" >> "${GITHUB_OUTPUT}"
+            else
+              echo "save-cache=false" >> "${GITHUB_OUTPUT}"
+            fi
+            ;;
+          true|false)
+            echo "save-cache=${REQUESTED_SAVE_CACHE}" >> "${GITHUB_OUTPUT}"
+            ;;
+          *)
+            echo "save-cache must be one of: auto, true, false" >&2
+            exit 1
+            ;;
+        esac
+
+    - name: Restore S3 cache
+      id: restore
+      if: ${{ steps.backend.outputs.enabled == 'true' }}
+      uses: runs-on/cache/restore@9fc411013eb63519a6930c994c298ba869be6fed # v4 S3 cache fix
+      with:
+        path: ${{ inputs.cache-paths }}
+        key: ${{ inputs.cache-key }}
+        restore-keys: ${{ inputs.restore-keys }}
+        enableCrossOsArchive: ${{ inputs.enable-cross-os-archive }}
+        fail-on-cache-miss: ${{ inputs.fail-on-cache-miss }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+        AWS_REGION: ${{ inputs.aws-region }}
+        AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
+        AWS_S3_FORCE_PATH_STYLE: ${{ inputs.force-path-style }}
+        RUNS_ON_RUNNER_NAME: ""
+        RUNS_ON_S3_BUCKET_CACHE: ${{ inputs.s3-bucket }}
+        RUNS_ON_S3_BUCKET_ENDPOINT: ${{ inputs.s3-endpoint }}
+
+    - name: Save S3 cache
+      if: ${{ steps.backend.outputs.enabled == 'true' && steps.save-policy.outputs.save-cache == 'true' && steps.restore.outputs.cache-hit != 'true' }}
+      uses: runs-on/cache/save@9fc411013eb63519a6930c994c298ba869be6fed # v4 S3 cache fix
+      with:
+        path: ${{ inputs.cache-paths }}
+        key: ${{ steps.restore.outputs.cache-primary-key }}
+        enableCrossOsArchive: ${{ inputs.enable-cross-os-archive }}
+      env:
+        AWS_ACCESS_KEY_ID: ${{ inputs.aws-access-key-id }}
+        AWS_SECRET_ACCESS_KEY: ${{ inputs.aws-secret-access-key }}
+        AWS_REGION: ${{ inputs.aws-region }}
+        AWS_DEFAULT_REGION: ${{ inputs.aws-region }}
+        AWS_S3_FORCE_PATH_STYLE: ${{ inputs.force-path-style }}
+        RUNS_ON_RUNNER_NAME: ""
+        RUNS_ON_S3_BUCKET_CACHE: ${{ inputs.s3-bucket }}
+        RUNS_ON_S3_BUCKET_ENDPOINT: ${{ inputs.s3-endpoint }}

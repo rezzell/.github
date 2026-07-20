@@ -1,0 +1,111 @@
+name: Shared S3 Cache Manager
+
+on:
+  workflow_call:
+    inputs:
+      cache-key:
+        description: The unique cache key to restore and save.
+        required: true
+        type: string
+      cache-paths:
+        description: Multiline list of file paths to cache.
+        required: true
+        type: string
+      restore-keys:
+        description: Optional multiline list of fallback cache key prefixes.
+        required: false
+        type: string
+        default: ""
+      runner:
+        description: JSON array suitable for runs-on.
+        required: false
+        type: string
+        default: '["self-hosted"]'
+      aws-region:
+        description: AWS region to provide to the S3 client.
+        required: false
+        type: string
+        default: us-east-1
+      save-cache:
+        description: "'auto' saves only on the repository default branch outside pull_request events; use 'true' or 'false' to override."
+        required: false
+        type: string
+        default: auto
+      force-path-style:
+        description: Force path-style S3 URLs for S3-compatible object stores.
+        required: false
+        type: string
+        default: "true"
+    secrets:
+      GLOBAL_CACHE_S3_ENDPOINT:
+        description: S3-compatible endpoint URL for the cache bucket.
+        required: false
+      GLOBAL_CACHE_S3_BUCKET:
+        description: S3 bucket name for cache objects.
+        required: false
+      GLOBAL_CACHE_AWS_ACCESS_KEY_ID:
+        description: AWS-compatible access key ID with cache bucket access.
+        required: false
+      GLOBAL_CACHE_AWS_SECRET_ACCESS_KEY:
+        description: AWS-compatible secret access key with cache bucket access.
+        required: false
+    outputs:
+      cache-hit:
+        description: Whether the primary cache key was restored exactly.
+        value: ${{ jobs.cache.outputs.cache-hit }}
+      cache-primary-key:
+        description: Resolved primary cache key used for restore and save.
+        value: ${{ jobs.cache.outputs.cache-primary-key }}
+      cache-matched-key:
+        description: Cache key that matched during restore, if any.
+        value: ${{ jobs.cache.outputs.cache-matched-key }}
+      save-cache:
+        description: Whether this invocation was allowed to save a new cache.
+        value: ${{ jobs.cache.outputs.save-cache }}
+      cache-enabled:
+        description: Whether all S3 backend settings were available.
+        value: ${{ jobs.cache.outputs.cache-enabled }}
+
+permissions:
+  contents: read
+
+jobs:
+  cache:
+    runs-on: ${{ fromJson(inputs.runner) }}
+    outputs:
+      cache-hit: ${{ steps.cache.outputs.cache-hit }}
+      cache-primary-key: ${{ steps.cache.outputs.cache-primary-key }}
+      cache-matched-key: ${{ steps.cache.outputs.cache-matched-key }}
+      save-cache: ${{ steps.cache.outputs.save-cache }}
+      cache-enabled: ${{ steps.cache.outputs.cache-enabled }}
+    steps:
+      - name: Resolve workflow repository source
+        id: workflow-source
+        env:
+          GITHUB_WORKFLOW_REF: ${{ github.workflow_ref }}
+        run: |
+          set -euo pipefail
+          echo "repository=${GITHUB_WORKFLOW_REF%%/.github/workflows/*}" >> "${GITHUB_OUTPUT}"
+          echo "ref=${GITHUB_WORKFLOW_REF##*@}" >> "${GITHUB_OUTPUT}"
+
+      - name: Check out workflow repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: ${{ steps.workflow-source.outputs.repository }}
+          ref: ${{ steps.workflow-source.outputs.ref }}
+          path: workflow-repo
+
+      - name: Manage S3 cache
+        id: cache
+        uses: ./workflow-repo/.github/actions/s3-cache-manager
+        with:
+          cache-key: ${{ inputs.cache-key }}
+          cache-paths: ${{ inputs.cache-paths }}
+          restore-keys: ${{ inputs.restore-keys }}
+          s3-endpoint: ${{ secrets.GLOBAL_CACHE_S3_ENDPOINT }}
+          s3-bucket: ${{ secrets.GLOBAL_CACHE_S3_BUCKET }}
+          aws-access-key-id: ${{ secrets.GLOBAL_CACHE_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.GLOBAL_CACHE_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ inputs.aws-region }}
+          save-cache: ${{ inputs.save-cache }}
+          force-path-style: ${{ inputs.force-path-style }}

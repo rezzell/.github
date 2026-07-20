@@ -1,0 +1,33 @@
+name: Validate S3 Cache Manager
+
+on:
+  pull_request:
+    paths:
+      - ".github/actions/s3-cache-manager/action.yml"
+      - ".github/workflows/s3-cache-manager.yml"
+      - ".github/workflows/validate-s3-cache-manager.yml"
+      - ".github/scripts/test-s3-cache-manager.sh"
+      - "README.md"
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/actions/s3-cache-manager/action.yml"
+      - ".github/workflows/s3-cache-manager.yml"
+      - ".github/workflows/validate-s3-cache-manager.yml"
+      - ".github/scripts/test-s3-cache-manager.sh"
+      - "README.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Run S3 cache manager tests
+        run: bash .github/scripts/test-s3-cache-manager.sh
