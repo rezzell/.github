@@ -7,13 +7,16 @@ automation that is safe to publish.
 
 - `.github/workflows/choose-runner.yml`: selects an online organization- or
   repository-scoped ARC runner scale set when one is visible through GitHub,
-  otherwise falls back to a GitHub-hosted runner.
+  otherwise falls back to a GitHub-hosted runner. See
+  [`docs/workflows/choose-runner.md`](docs/workflows/choose-runner.md).
 - `.github/actions/s3-cache-manager/action.yml`: restores and conditionally
   saves GitHub Actions cache paths through an S3-compatible backend for
   ephemeral ARC or other self-hosted runners.
+  See [`docs/workflows/s3-cache-manager.md`](docs/workflows/s3-cache-manager.md).
 - `.github/workflows/s3-cache-manager.yml`: workflow-call wrapper around the
   S3 cache manager action for cache-only jobs that intentionally run as their
   own reusable workflow job.
+  See [`docs/workflows/s3-cache-manager.md`](docs/workflows/s3-cache-manager.md).
 - Organization community health files and workflow templates may be added here
   when they are intended for public reuse.
 
