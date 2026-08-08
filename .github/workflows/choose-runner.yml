@@ -5,7 +5,18 @@ on:
     inputs:
       organization:
         description: GitHub organization that owns the runner scale set
-        required: true
+        required: false
+        default: rezzell
+        type: string
+      runner-scope:
+        description: Scope that owns the runner scale set (organization or repository)
+        required: false
+        default: organization
+        type: string
+      repository:
+        description: GitHub owner/repository for a repository-scoped runner scale set; defaults to the caller repository
+        required: false
+        default: ''
         type: string
       scale-set-name:
         description: Runner scale set name to prefer when online
@@ -16,8 +27,11 @@ on:
         required: true
         type: string
     secrets:
+      runners-read-token:
+        description: Fine-grained token with read access to self-hosted runners at the selected scope
+        required: false
       org-runners-read-token:
-        description: Fine-grained token with Self-hosted runners organization read permission
+        description: Legacy organization runner-read token; use runners-read-token for new callers
         required: false
     outputs:
       runner:
@@ -52,8 +66,10 @@ jobs:
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
           GITHUB_EVENT_PATH: ${{ github.event_path }}
-          GH_TOKEN: ${{ secrets.org-runners-read-token }}
+          GH_TOKEN: ${{ secrets.runners-read-token || secrets.org-runners-read-token }}
           ORGANIZATION: ${{ inputs.organization }}
+          RUNNER_SCOPE: ${{ inputs.runner-scope }}
+          REPOSITORY: ${{ inputs.repository || github.repository }}
           SCALE_SET_NAME: ${{ inputs.scale-set-name }}
           FALLBACK_RUNNER: ${{ inputs.fallback-runner }}
         run: |
