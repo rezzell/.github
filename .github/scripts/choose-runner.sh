@@ -4,7 +4,9 @@ set -euo pipefail
 event_name="${GITHUB_EVENT_NAME:?GITHUB_EVENT_NAME is required}"
 event_path="${GITHUB_EVENT_PATH:?GITHUB_EVENT_PATH is required}"
 token="${GH_TOKEN:-}"
-organization="${ORGANIZATION:?ORGANIZATION is required}"
+organization="${ORGANIZATION:-}"
+runner_scope="${RUNNER_SCOPE:-organization}"
+repository="${REPOSITORY:-}"
 scale_set_name="${SCALE_SET_NAME:?SCALE_SET_NAME is required}"
 fallback_runner="${FALLBACK_RUNNER:?FALLBACK_RUNNER is required}"
 public_runner_set_alias="preferred-runner-set"
@@ -54,6 +56,27 @@ fetch_mock_page() {
 
 fetch_all_runners() {
   local online_count=0
+  local url
+  case "${runner_scope}" in
+    organization)
+      [[ "${organization}" =~ ^[A-Za-z0-9_.-]+$ ]] || {
+        echo "Choose Runner: invalid organization name" >&2
+        return 1
+      }
+      url="https://api.github.com/orgs/${organization}/actions/runners?per_page=100"
+      ;;
+    repository)
+      [[ "${repository}" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || {
+        echo "Choose Runner: invalid repository name" >&2
+        return 1
+      }
+      url="https://api.github.com/repos/${repository}/actions/runners?per_page=100"
+      ;;
+    *)
+      echo "Choose Runner: unsupported runner scope ${runner_scope}" >&2
+      return 1
+      ;;
+  esac
 
   if [[ -n "${MOCK_RUNNERS_RESPONSE:-}" || -n "${MOCK_RUNNERS_RESPONSE_PAGE_1:-}" ]]; then
     local page=1
@@ -68,7 +91,6 @@ fetch_all_runners() {
     return 0
   fi
 
-  local url="https://api.github.com/orgs/${organization}/actions/runners?per_page=100"
   while [[ -n "${url}" ]]; do
     local headers_file
     local body_file
@@ -107,12 +129,16 @@ if ! trusted_event; then
 fi
 
 if [[ -z "${token}" ]]; then
-  echo "Choose Runner: trusted event but no org-runners-read-token secret available; using fallback runner ${fallback_runner}"
+  echo "Choose Runner: trusted event but no runners-read-token secret available; using fallback runner ${fallback_runner}"
   emit_runner "${fallback_runner}"
   exit 0
 fi
 
-online_count="$(fetch_all_runners)"
+if ! online_count="$(fetch_all_runners)"; then
+  echo "Choose Runner: runner lookup failed; using fallback runner ${fallback_runner}"
+  emit_runner "${fallback_runner}"
+  exit 0
+fi
 
 if [[ "${online_count}" -gt 0 ]]; then
   echo "Choose Runner: found ${online_count} online runner(s) for the preferred runner set; using ${public_runner_set_alias}"

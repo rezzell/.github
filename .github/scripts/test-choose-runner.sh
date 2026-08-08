@@ -24,6 +24,8 @@ run_case() {
     GITHUB_EVENT_PATH="${event_path}" \
     GH_TOKEN="${token}" \
     ORGANIZATION="rezzell" \
+    RUNNER_SCOPE="organization" \
+    REPOSITORY="russell-parks/eve-copilot" \
     SCALE_SET_NAME="preferred-runner-set" \
     FALLBACK_RUNNER="ubuntu-latest" \
     MOCK_RUNNERS_RESPONSE="${api_body}" \
@@ -44,6 +46,8 @@ run_case_multi_page() {
     GITHUB_EVENT_PATH="${event_path}" \
     GH_TOKEN="token" \
     ORGANIZATION="rezzell" \
+    RUNNER_SCOPE="organization" \
+    REPOSITORY="russell-parks/eve-copilot" \
     SCALE_SET_NAME="preferred-runner-set" \
     FALLBACK_RUNNER="ubuntu-latest" \
     MOCK_RUNNERS_RESPONSE_PAGE_1='{"runners":[{"name":"other-set-001","status":"online"}]}' \
@@ -53,6 +57,33 @@ run_case_multi_page() {
 
   printf '%s\n' "${output}" | grep -F 'Choose Runner: found 1 online runner(s) for the preferred runner set; using preferred-runner-set' >/dev/null
   printf '%s\n' "${output}" | grep -F 'runner=["preferred-runner-set"]' >/dev/null
+}
+
+run_scope_case() {
+  local name="$1"
+  local scope="$2"
+  local repository="$3"
+  local expected_runner="$4"
+  local expected_log="$5"
+  local event_path="${tmpdir}/${name}-event.json"
+  printf '%s\n' '{}' > "${event_path}"
+
+  local output
+  output="$(
+    GITHUB_EVENT_NAME="push" \
+    GITHUB_EVENT_PATH="${event_path}" \
+    GH_TOKEN="token" \
+    ORGANIZATION="rezzell" \
+    RUNNER_SCOPE="${scope}" \
+    REPOSITORY="${repository}" \
+    SCALE_SET_NAME="preferred-runner-set" \
+    FALLBACK_RUNNER="ubuntu-latest" \
+    MOCK_RUNNERS_RESPONSE='{"runners":[{"name":"preferred-runner-set","status":"online"}]}' \
+    bash "${script}" 2>&1
+  )"
+
+  printf '%s\n' "${output}" | grep -F "${expected_log}" >/dev/null
+  printf '%s\n' "${output}" | grep -F "runner=${expected_runner}" >/dev/null
 }
 
 run_case \
@@ -71,7 +102,7 @@ run_case \
   "" \
   '{"runners":[]}' \
   '["ubuntu-latest"]' \
-  'Choose Runner: trusted event but no org-runners-read-token secret available; using fallback runner ubuntu-latest'
+  'Choose Runner: trusted event but no runners-read-token secret available; using fallback runner ubuntu-latest'
 
 run_case \
   "trusted-no-runners" \
@@ -101,5 +132,26 @@ run_case \
   'Choose Runner: found 1 online runner(s) for the preferred runner set; using preferred-runner-set'
 
 run_case_multi_page
+
+run_scope_case \
+  "repository-scope" \
+  "repository" \
+  "russell-parks/eve-copilot" \
+  '["preferred-runner-set"]' \
+  'Choose Runner: found 1 online runner(s) for the preferred runner set; using preferred-runner-set'
+
+run_scope_case \
+  "invalid-repository" \
+  "repository" \
+  "not-an-owner-repository" \
+  '["ubuntu-latest"]' \
+  'Choose Runner: runner lookup failed; using fallback runner ubuntu-latest'
+
+run_scope_case \
+  "invalid-scope" \
+  "enterprise" \
+  "russell-parks/eve-copilot" \
+  '["ubuntu-latest"]' \
+  'Choose Runner: runner lookup failed; using fallback runner ubuntu-latest'
 
 echo "test-choose-runner.sh: PASS"

@@ -5,9 +5,9 @@ automation that is safe to publish.
 
 ## Contents
 
-- `.github/workflows/choose-runner.yml`: selects an online ARC runner scale set
-  when one is visible through GitHub, otherwise falls back to a GitHub-hosted
-  runner.
+- `.github/workflows/choose-runner.yml`: selects an online organization- or
+  repository-scoped ARC runner scale set when one is visible through GitHub,
+  otherwise falls back to a GitHub-hosted runner.
 - `.github/actions/s3-cache-manager/action.yml`: restores and conditionally
   saves GitHub Actions cache paths through an S3-compatible backend for
   ephemeral ARC or other self-hosted runners.
@@ -70,9 +70,11 @@ Example step-level usage:
 ## `choose-runner` trust policy
 
 - Fork-originated pull requests always fall back to the caller's GitHub-hosted runner.
-- Trusted events (`push`, `workflow_dispatch`, `schedule`, and non-fork pull requests) may use self-hosted runners when `ORG_RUNNERS_READ_TOKEN` is available.
+- Trusted events (`push`, `workflow_dispatch`, `schedule`, and non-fork pull requests) may use self-hosted runners when a runner-read token is available.
 - If the token is absent or no matching runner is online, the workflow falls back to the configured GitHub-hosted runner.
 - Caller workflows should continue to consume `needs.choose-runner.outputs.runner` with `runs-on: ${{ fromJson(...) }}`.
+- Organization scope remains the default. For a repository-scoped scale set, set `runner-scope: repository`; the lookup defaults to the calling repository, or callers may supply `repository: owner/name` explicitly.
+- New callers should pass the generic `runners-read-token` secret. The legacy `org-runners-read-token` secret remains supported for existing organization-scoped callers.
 
 Private organization-only actions and workflows belong in
 `rezzell/github-actions-private`, not this repository.
