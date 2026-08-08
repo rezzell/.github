@@ -69,9 +69,15 @@ a security-sensitive supply chain.
 New callers should use `runners-read-token`. If both secrets are supplied, the
 generic secret takes precedence.
 
-The credential needs only the GitHub permission required to list self-hosted
-runners at its selected scope. Do not give it workflow, contents-write, or
-OpenShift permissions.
+Use the smallest permission GitHub documents for the selected endpoint:
+
+- Organization scope: fine-grained organization permission
+  `Self-hosted runners: read`.
+- Repository scope: fine-grained repository permission `Administration: read`.
+
+Do not give the credential workflow, repository administration write,
+contents-write, or OpenShift permissions. A classic PAT is broader than these
+fine-grained permissions and is not preferred.
 
 ## Outputs
 

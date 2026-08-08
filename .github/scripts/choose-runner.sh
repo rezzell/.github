@@ -79,6 +79,11 @@ fetch_all_runners() {
   esac
 
   if [[ -n "${MOCK_RUNNERS_RESPONSE:-}" || -n "${MOCK_RUNNERS_RESPONSE_PAGE_1:-}" ]]; then
+    if [[ -n "${MOCK_EXPECTED_RUNNERS_URL:-}" && "${url}" != "${MOCK_EXPECTED_RUNNERS_URL}" ]]; then
+      echo "Choose Runner: unexpected runners API URL" >&2
+      return 1
+    fi
+
     local page=1
     local body
     while body="$(fetch_mock_page "${page}")"; do
@@ -97,15 +102,21 @@ fetch_all_runners() {
     headers_file="$(mktemp)"
     body_file="$(mktemp)"
 
-    curl -fsSL \
-      -H "Authorization: Bearer ${token}" \
-      -H "Accept: application/vnd.github+json" \
-      -D "${headers_file}" \
-      "${url}" \
-      -o "${body_file}"
+    if ! curl -fsSL \
+        -H "Authorization: Bearer ${token}" \
+        -H "Accept: application/vnd.github+json" \
+        -D "${headers_file}" \
+        "${url}" \
+        -o "${body_file}"; then
+      rm -f "${headers_file}" "${body_file}"
+      return 1
+    fi
 
     local page_count
-    page_count="$(jq -r --arg prefix "${scale_set_name}" '[.runners[] | select(.status == "online" and (.name | startswith($prefix)))] | length' "${body_file}")"
+    if ! page_count="$(jq -r --arg prefix "${scale_set_name}" '[.runners[] | select(.status == "online" and (.name | startswith($prefix)))] | length' "${body_file}")"; then
+      rm -f "${headers_file}" "${body_file}"
+      return 1
+    fi
     online_count="$((online_count + page_count))"
 
     url="$(grep -i '^link:' "${headers_file}" | sed -n 's/.*<\([^>]*\)>; rel="next".*/\1/p' || true)"

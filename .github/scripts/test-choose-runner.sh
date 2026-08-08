@@ -65,6 +65,7 @@ run_scope_case() {
   local repository="$3"
   local expected_runner="$4"
   local expected_log="$5"
+  local expected_url="${6:-}"
   local event_path="${tmpdir}/${name}-event.json"
   printf '%s\n' '{}' > "${event_path}"
 
@@ -79,6 +80,7 @@ run_scope_case() {
     SCALE_SET_NAME="preferred-runner-set" \
     FALLBACK_RUNNER="ubuntu-latest" \
     MOCK_RUNNERS_RESPONSE='{"runners":[{"name":"preferred-runner-set","status":"online"}]}' \
+    MOCK_EXPECTED_RUNNERS_URL="${expected_url}" \
     bash "${script}" 2>&1
   )"
 
@@ -138,7 +140,8 @@ run_scope_case \
   "repository" \
   "russell-parks/eve-copilot" \
   '["preferred-runner-set"]' \
-  'Choose Runner: found 1 online runner(s) for the preferred runner set; using preferred-runner-set'
+  'Choose Runner: found 1 online runner(s) for the preferred runner set; using preferred-runner-set' \
+  'https://api.github.com/repos/russell-parks/eve-copilot/actions/runners?per_page=100'
 
 run_scope_case \
   "invalid-repository" \
