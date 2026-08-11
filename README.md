@@ -17,6 +17,9 @@ automation that is safe to publish.
   S3 cache manager action for cache-only jobs that intentionally run as their
   own reusable workflow job.
   See [`docs/workflows/s3-cache-manager.md`](docs/workflows/s3-cache-manager.md).
+- `.github/workflows/sync-github-hooks-cloudflare-list.yml`: daily workflow
+  that syncs GitHub webhook egress ranges into a Cloudflare account IP list
+  using `rezzell/cloudflare-ip-list-sync-action`.
 - Organization community health files and workflow templates may be added here
   when they are intended for public reuse.
 
@@ -82,6 +85,20 @@ Example step-level usage:
 
 Private organization-only actions and workflows belong in
 `rezzell/github-actions-private`, not this repository.
+
+## GitHub webhook Cloudflare list sync
+
+The GitHub webhook Cloudflare list sync workflow keeps a Cloudflare account IP
+list aligned with the `hooks` ranges from the GitHub Meta API. The workflow is
+safe in this public repository because all Cloudflare details come from secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_GITHUB_HOOKS_LIST_ID`
+
+If those secrets are absent, the scheduled run skips without failing. The
+Cloudflare token should be scoped only to editing account rules lists for the
+account that owns the target list.
 
 ## Change Review
 
