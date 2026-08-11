@@ -28,8 +28,9 @@ Treat every file and every commit in this repository as public.
   sensitive infrastructure details.
 - Never embed tokens in reusable workflows. Accept secrets from callers only
   when required.
-- Use least-privilege credentials. The runner selector requires only the
-  `Self-hosted runners: Read` organization permission.
+- Use least-privilege credentials. The runner selector needs only
+  `Self-hosted runners: read` for organization scope or `Administration: read`
+  for repository scope.
 - Keep fork pull requests safe. Public workflows must handle missing secrets
   without exposing credentials or blocking untrusted contributions.
 - Pin third-party actions to immutable commit SHAs.
