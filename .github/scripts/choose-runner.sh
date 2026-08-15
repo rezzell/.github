@@ -4,7 +4,9 @@ set -euo pipefail
 event_name="${GITHUB_EVENT_NAME:?GITHUB_EVENT_NAME is required}"
 event_path="${GITHUB_EVENT_PATH:?GITHUB_EVENT_PATH is required}"
 token="${GH_TOKEN:-}"
-organization="${ORGANIZATION:?ORGANIZATION is required}"
+organization="${ORGANIZATION:-}"
+runner_scope="${RUNNER_SCOPE:-organization}"
+repository="${REPOSITORY:-}"
 scale_set_name="${SCALE_SET_NAME:?SCALE_SET_NAME is required}"
 fallback_runner="${FALLBACK_RUNNER:?FALLBACK_RUNNER is required}"
 public_runner_set_alias="preferred-runner-set"
@@ -54,8 +56,34 @@ fetch_mock_page() {
 
 fetch_all_runners() {
   local online_count=0
+  local url
+  case "${runner_scope}" in
+    organization)
+      [[ "${organization}" =~ ^[A-Za-z0-9_.-]+$ ]] || {
+        echo "Choose Runner: invalid organization name" >&2
+        return 1
+      }
+      url="https://api.github.com/orgs/${organization}/actions/runners?per_page=100"
+      ;;
+    repository)
+      [[ "${repository}" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || {
+        echo "Choose Runner: invalid repository name" >&2
+        return 1
+      }
+      url="https://api.github.com/repos/${repository}/actions/runners?per_page=100"
+      ;;
+    *)
+      echo "Choose Runner: unsupported runner scope ${runner_scope}" >&2
+      return 1
+      ;;
+  esac
 
   if [[ -n "${MOCK_RUNNERS_RESPONSE:-}" || -n "${MOCK_RUNNERS_RESPONSE_PAGE_1:-}" ]]; then
+    if [[ -n "${MOCK_EXPECTED_RUNNERS_URL:-}" && "${url}" != "${MOCK_EXPECTED_RUNNERS_URL}" ]]; then
+      echo "Choose Runner: unexpected runners API URL" >&2
+      return 1
+    fi
+
     local page=1
     local body
     while body="$(fetch_mock_page "${page}")"; do
@@ -68,22 +96,27 @@ fetch_all_runners() {
     return 0
   fi
 
-  local url="https://api.github.com/orgs/${organization}/actions/runners?per_page=100"
   while [[ -n "${url}" ]]; do
     local headers_file
     local body_file
     headers_file="$(mktemp)"
     body_file="$(mktemp)"
 
-    curl -fsSL \
-      -H "Authorization: Bearer ${token}" \
-      -H "Accept: application/vnd.github+json" \
-      -D "${headers_file}" \
-      "${url}" \
-      -o "${body_file}"
+    if ! curl -fsSL \
+        -H "Authorization: Bearer ${token}" \
+        -H "Accept: application/vnd.github+json" \
+        -D "${headers_file}" \
+        "${url}" \
+        -o "${body_file}"; then
+      rm -f "${headers_file}" "${body_file}"
+      return 1
+    fi
 
     local page_count
-    page_count="$(jq -r --arg prefix "${scale_set_name}" '[.runners[] | select(.status == "online" and (.name | startswith($prefix)))] | length' "${body_file}")"
+    if ! page_count="$(jq -r --arg prefix "${scale_set_name}" '[.runners[] | select(.status == "online" and (.name | startswith($prefix)))] | length' "${body_file}")"; then
+      rm -f "${headers_file}" "${body_file}"
+      return 1
+    fi
     online_count="$((online_count + page_count))"
 
     url="$(grep -i '^link:' "${headers_file}" | sed -n 's/.*<\([^>]*\)>; rel="next".*/\1/p' || true)"
@@ -107,12 +140,16 @@ if ! trusted_event; then
 fi
 
 if [[ -z "${token}" ]]; then
-  echo "Choose Runner: trusted event but no org-runners-read-token secret available; using fallback runner ${fallback_runner}"
+  echo "Choose Runner: trusted event but no runners-read-token secret available; using fallback runner ${fallback_runner}"
   emit_runner "${fallback_runner}"
   exit 0
 fi
 
-online_count="$(fetch_all_runners)"
+if ! online_count="$(fetch_all_runners)"; then
+  echo "Choose Runner: runner lookup failed; using fallback runner ${fallback_runner}"
+  emit_runner "${fallback_runner}"
+  exit 0
+fi
 
 if [[ "${online_count}" -gt 0 ]]; then
   echo "Choose Runner: found ${online_count} online runner(s) for the preferred runner set; using ${public_runner_set_alias}"

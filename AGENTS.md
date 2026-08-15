@@ -31,8 +31,23 @@ publish.
 - Confirm that shell scripts use strict error handling and quote variables.
 - Confirm that any added dependency is necessary and pinned.
 
+## Automation Documentation Contract
+
+- Every reusable workflow under `.github/workflows/` and reusable action under
+  `.github/actions/` must have a caller-facing document under `docs/workflows/`.
+- Document purpose, trust boundary, inputs, secrets, outputs, complete usage,
+  account or repository setup, fallback behavior, and troubleshooting.
+- Explain implementation decisions that callers or future maintainers would
+  otherwise have to rediscover, including GitHub ownership and permission
+  boundaries.
+- Keep the workflow metadata, implementation, tests, README link, and detailed
+  document synchronized in the same pull request.
+- Validation-only workflows may be documented by the item they validate rather
+  than receiving a separate caller document.
+
 ## Repository Hygiene
 
-- Keep `README.md` current when workflows or templates are added.
+- Keep `README.md` current and link every reusable automation item to its
+  detailed documentation.
 - Keep `CLAUDE.md` as a thin pointer to this file.
 - Use focused commits and review workflow changes before publishing them.
