@@ -1,0 +1,113 @@
+name: Product feature
+description: Track delivery of one product outcome while keeping product authority in the canonical Notion record.
+title: "[Feature] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for a product-level delivery container, not for an individual coding task.
+
+        The linked Notion feature or requirement owns product intent, approval state,
+        acceptance criteria, and durable outcomes. GitHub owns delivery decomposition,
+        dependencies, implementation state, pull requests, and verification evidence.
+
+  - type: input
+    id: product
+    attributes:
+      label: Product
+      description: Name the product that primarily owns this outcome.
+      placeholder: gamesaves.cloud
+    validations:
+      required: true
+
+  - type: input
+    id: feature_id
+    attributes:
+      label: Product Feature ID
+      description: Enter the identifier assigned by the shared Notion Product Features database, when available.
+      placeholder: PF-1
+
+  - type: input
+    id: canonical_requirement
+    attributes:
+      label: Canonical Notion source
+      description: Link the feature record, approved requirement, or other owning product source and identify its version when applicable.
+      placeholder: https://www.notion.so/... — approved version or date
+    validations:
+      required: true
+
+  - type: dropdown
+    id: authority_status
+    attributes:
+      label: Product authority status
+      description: Copy the current authority state from the canonical Notion source. This issue does not change it.
+      options:
+        - Draft
+        - Proposed
+        - Approved
+        - Superseded
+        - Archived
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Product outcome
+      description: State the user, operator, or business problem and the observable outcome this feature is intended to produce.
+      placeholder: |
+        Actor and problem:
+        Desired outcome:
+        Success signal:
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Delivery scope
+      description: State the bounded delivery outcome represented by this feature container.
+      placeholder: |
+        In scope:
+        - ...
+
+        Out of scope:
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Product acceptance path
+      description: Identify the canonical acceptance criteria, accountable reviewer, and evidence expected before the Notion feature can be marked Accepted.
+      placeholder: |
+        Acceptance source:
+        Accountable reviewer:
+        Required evidence:
+    validations:
+      required: true
+
+  - type: textarea
+    id: children
+    attributes:
+      label: Delivery decomposition
+      description: Link bounded sub-issues, dependencies, and evidence. Direct coding agents should receive a child issue, not this container.
+      placeholder: |
+        Sub-issues:
+        - owner/repository#123
+
+        Dependencies:
+        - ...
+
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Control-plane boundaries
+      options:
+        - label: Canonical product intent and approval remain in Notion; this issue does not create or expand product authority.
+          required: true
+        - label: This feature issue is a delivery container and is not itself a direct coding-agent unit.
+          required: true
+        - label: Closed sub-issues and merged pull requests are evidence, not product acceptance; acceptance will be recorded in the owning Notion source.
+          required: true
