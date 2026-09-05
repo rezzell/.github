@@ -1,0 +1,130 @@
+name: Project outcome
+description: Track delivery of one durable project objective, milestone, or outcome without treating it as a product feature or leaf task.
+title: "[Outcome] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this form for a project-level delivery container above individual work
+        packets or implementation tickets.
+
+        The canonical Notion project page and Project Outcomes record own durable
+        project context. GitHub owns delivery decomposition, dependencies,
+        implementation state, pull requests, and verification evidence.
+
+  - type: input
+    id: project
+    attributes:
+      label: Project
+      description: Name the Rezzell Project that owns this outcome.
+      placeholder: Project name
+    validations:
+      required: true
+
+  - type: input
+    id: outcome_id
+    attributes:
+      label: Project Outcome ID
+      description: Enter the identifier assigned by the shared Notion Project Outcomes database, when available.
+      placeholder: PO-1
+
+  - type: input
+    id: canonical_context
+    attributes:
+      label: Canonical Notion project context
+      description: Link the owning project page and, when available, the Project Outcomes record.
+      placeholder: https://www.notion.so/...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: source_classification
+    attributes:
+      label: Source classification
+      description: State how the outcome is supported. This issue cannot ratify a proposal.
+      options:
+        - Observed
+        - Derived
+        - Proposed
+        - Ratified
+    validations:
+      required: true
+
+  - type: dropdown
+    id: outcome_type
+    attributes:
+      label: Outcome type
+      options:
+        - Project Objective
+        - Milestone
+        - Deliverable
+        - Experiment
+        - Decision
+        - Operational Readiness
+    validations:
+      required: true
+
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Problem and intended outcome
+      description: State the project-level problem or objective and the observable result sought.
+      placeholder: |
+        Current problem or objective:
+        Intended outcome:
+    validations:
+      required: true
+
+  - type: textarea
+    id: completion
+    attributes:
+      label: Completion signal
+      description: Define the evidence needed before the project outcome may be considered complete.
+      placeholder: |
+        Completion requires:
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Delivery boundary
+      description: State what this container includes and excludes.
+      placeholder: |
+        In scope:
+        - ...
+
+        Out of scope:
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: delivery
+    attributes:
+      label: Delivery decomposition and dependencies
+      description: Link milestones, work packets, child issues, dependencies, pull requests, and evidence. Direct coding agents should receive a bounded child issue.
+      placeholder: |
+        Child work:
+        - owner/repository#123
+
+        Dependencies:
+        - ...
+
+        Evidence:
+        - ...
+
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Control-plane boundaries
+      options:
+        - label: This issue does not reclassify the Project as a Product or create product authority.
+          required: true
+        - label: This outcome container is not itself a direct coding-agent unit unless its scope is explicitly bounded to one coherent delivery cycle.
+          required: true
+        - label: Closed child issues and merged pull requests are evidence; the Notion Project Outcomes record remains the durable project-level view.
+          required: true
+        - label: Agent Work Coordination is used only for cross-session continuity, waits, claims, routing, and handoffs.
+          required: true
