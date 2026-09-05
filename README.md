@@ -20,6 +20,9 @@ automation that is safe to publish.
 - `.github/workflows/sync-github-hooks-cloudflare-list.yml`: daily workflow
   that syncs GitHub webhook egress ranges into a Cloudflare account IP list
   using `rezzell/cloudflare-ip-list-sync-action`.
+- `.github/ISSUE_TEMPLATE/product-feature.yml`: organization-default issue
+  form for product-level delivery containers linked to canonical product
+  sources. See [`docs/product-feature-delivery.md`](docs/product-feature-delivery.md).
 - Organization community health files and workflow templates may be added here
   when they are intended for public reuse.
 
