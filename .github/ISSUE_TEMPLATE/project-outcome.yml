@@ -67,11 +67,17 @@ body:
   - type: textarea
     id: outcome
     attributes:
-      label: Problem and intended outcome
-      description: State the project-level problem or objective and the observable result sought.
+      label: Problem, intended outcome, and boundary
+      description: State the project-level problem or objective, observable result, and explicit scope boundary.
       placeholder: |
         Current problem or objective:
         Intended outcome:
+
+        In scope:
+        - ...
+
+        Out of scope:
+        - ...
     validations:
       required: true
 
@@ -82,20 +88,6 @@ body:
       description: Define the evidence needed before the project outcome may be considered complete.
       placeholder: |
         Completion requires:
-        - ...
-    validations:
-      required: true
-
-  - type: textarea
-    id: scope
-    attributes:
-      label: Delivery boundary
-      description: State what this container includes and excludes.
-      placeholder: |
-        In scope:
-        - ...
-
-        Out of scope:
         - ...
     validations:
       required: true
