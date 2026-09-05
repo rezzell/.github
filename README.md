@@ -23,6 +23,9 @@ automation that is safe to publish.
 - `.github/ISSUE_TEMPLATE/product-feature.yml`: organization-default issue
   form for product-level delivery containers linked to canonical product
   sources. See [`docs/product-feature-delivery.md`](docs/product-feature-delivery.md).
+- `.github/ISSUE_TEMPLATE/project-outcome.yml`: organization-default issue
+  form for project-level outcome containers that remain distinct from product
+  features and leaf work. See [`docs/project-outcome-delivery.md`](docs/project-outcome-delivery.md).
 - Organization community health files and workflow templates may be added here
   when they are intended for public reuse.
 
